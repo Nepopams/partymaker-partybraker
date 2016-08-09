@@ -5,21 +5,41 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by Vadim on 08.08.2016.
  */
 public class ShumFieldsFactory extends JFrame{
-   private boolean hnb=false, kkb=false, svb=false, smb=false;
+   private boolean hnb=false, kkb=false, svb=false, smb=false, psd=false, psvb=false;
    JLabel area,t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, l1, l2, k1, k2, k3, k4 ,k5, k6, k7, l3, f1,f2,f3,f4,f5,f6,f7, l4;
    JPanel panel;
     JTextField tt1,tt2,tt3,tt4,tt5,tt6,tt7, tt8, tt9, tt10, tt11, tt12, tt13, tt14,kk1, kk2, kk3, kk4, kk5, kk6, kk7, sm11,sm12,sm13,sm14,sm15,sm16,sm17,sm21,sm22,sm23,sm24,sm25,sm26,sm27,sm31,sm32,sm33,sm34,sm35,sm36,sm37,sm41,sm42,sm43,sm44,sm45,sm46,sm47,sm51,sm52,sm53,sm54,sm55,sm56,sm57;
- JButton sm, sv, hn, kk, rass;
+ JButton sm, sv, hn, kk, rass, psm, psmchck,kkch, psv, psvchck;
+
+    HashMap<Double,Double> rassmap;
+    JTable table;
     double sm1, sm2, sm3, sm4, sm5, sm6, sm7;
     ShumData data = new ShumData();
+    JComboBox comboBox;
+
+    String[][]t=new String[15][], kkt=new String[7][];
+    String[]k={"f","p"}, kktr={"Deg","kk"};
+    String[] deg={"0", "30", "45","60","90","120","140"};
+
+    int degrass=0;
 
     public ShumData getData() {
         return data;
+    }
+
+    public void setPsd(boolean psd) {
+        this.psd = psd;
+    }
+
+    public void setPsvb(boolean psvb) {
+        this.psvb = psvb;
     }
 
     public void setHnb(boolean hnb) {
@@ -38,6 +58,10 @@ public class ShumFieldsFactory extends JFrame{
         this.smb = smb;
     }
 
+    public void setDegrass(int degrass) {
+        this.degrass = degrass;
+    }
+
     public ShumFieldsFactory() throws HeadlessException {
         super("Test");
         createui();
@@ -50,12 +74,51 @@ public class ShumFieldsFactory extends JFrame{
         panel.setLayout(new FlowLayout());
         panel.setLayout(null);
 
+
+        //параметры рассчета
+        comboBox = new JComboBox(deg);
+        comboBox.setBounds(100,400,366,40);
+        comboBox.addActionListener(new CBActionlistener());
+        comboBox.setVisible(false);
+        panel.add(comboBox);
+
+
         rass = new JButton("Рассчет");
         rass.setBounds(400,365,100,20);
         rass.addActionListener(new RassBListener());
         panel.add(rass);
         rass.setVisible(false);
 
+        //данные подводный шум механизмов
+
+        psm = new JButton("Загрузить данные Подводный шум Мех");
+        psm.setBounds(100, 50, 286, 20);
+        psm.addActionListener(new PSMBListener());
+        panel.add(psm);
+
+        //данные подводный шум винта
+        psv = new JButton("Загрузить данные Подводный шум Винт");
+        psv.setBounds(100, 25, 286, 20);
+        psv.addActionListener(new PSVBListener());
+        panel.add(psv);
+
+        //таблица
+
+        psvchck=new JButton("Проверить данные Подводный Шум Винт");
+        psvchck.setBounds(100, 25, 286, 20);
+        psvchck.addActionListener(new PSMCBListener());
+        panel.add(psvchck);
+        psvchck.setVisible(false);
+
+        psmchck=new JButton("Проверить данные Подводный Шум Мех");
+        psmchck.setBounds(100, 50, 286, 20);
+        psmchck.addActionListener(new PSMCBListener());
+        panel.add(psmchck);
+        psmchck.setVisible(false);
+       /* table=new JTable(t, k);
+        table.setBounds(100,480,300,400);
+        panel.add(table);
+        table.setVisible(false);*/
 
         //шум механизмов
         createField(l4, 20,-20,70,20,"Ф1альфа");
@@ -414,6 +477,11 @@ public class ShumFieldsFactory extends JFrame{
         kk.addActionListener(new KKBListener());
         panel.add(kk);
 
+        kkch=new JButton("Проверить");
+        kkch.setBounds(391, 320, 100,20);
+        kkch.addActionListener(new KKCHBListener());
+        panel.add(kkch);
+
         /*
         createField(kk1, 100, 200,40,20);
         createField(kk2, 141,200,40,20);
@@ -424,7 +492,7 @@ public class ShumFieldsFactory extends JFrame{
         createField(kk7, 346,200,40,20);
 */
         area = new JLabel("Запомните данные");
-        area.setBounds(100, 365, 366, 100);
+        area.setBounds(100, 365, 366, 20);
         panel.add(area);
 
 
@@ -433,7 +501,10 @@ public class ShumFieldsFactory extends JFrame{
     }
 
     public void isAllBoolean(){
-        if (svb&&smb&&hnb&&kkb) rass.setVisible(true);
+        if (svb&&smb&&hnb&&kkb&&psd&&psvb) {
+            rass.setVisible(true);
+            comboBox.setVisible(true);
+        }
     }
 
     public class RassBListener implements ActionListener{
@@ -442,9 +513,20 @@ public class ShumFieldsFactory extends JFrame{
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            data.plus();
-            area.setText(""+data.plus());
+          rassmap=data.pgaksSolution(degrass);
+            int i=0;
+            for(Map.Entry<Double,Double> pair :rassmap.entrySet()  ){
+                String[]b={pair.getKey().toString(), pair.getValue().toString()};
+                t[i]=b;
+                i++;
+
+
+
+            }
+            new PShumTableCheck().createUI(t, k);
+
         }
+
     }
 
     class BListener implements ActionListener{
@@ -580,11 +662,94 @@ public class ShumFieldsFactory extends JFrame{
                 setKkb(true);
                 isAllBoolean();
 
+                int i=0;
+                for(Map.Entry<Integer,Double> pair:data.kk.entrySet()){
+                    String[]b={pair.getKey().toString(), pair.getValue().toString()};
+                    kkt[i]=b;
+                    i++;
+                }
+
+                kkch.setVisible(true);
+
 
             }
             catch (NumberFormatException c){
                 area.setText("Неверно введены данные");
             }
+        }
+    }
+
+    class KKCHBListener implements ActionListener{
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            new PShumTableCheck().createUI(kkt, kktr);
+        }
+    }
+
+    class PSMBListener implements ActionListener{
+        int i=0;
+        @Override
+        public void actionPerformed(ActionEvent e) {
+
+            new ShumExcelParser().parsexls(data.psm, "c:/users/vadim/ideaprojects/rasschetmetodika/data/1.xls");
+
+
+            for(Map.Entry<Double,Double> pair :data.psm.entrySet()  ){
+                String[]b={pair.getKey().toString(), pair.getValue().toString()};
+                t[i]=b;
+                i++;
+
+
+
+            }
+            psmchck.setVisible(true);
+            psm.setVisible(false);
+            setPsd(true);
+            isAllBoolean();
+
+
+        }
+    }
+
+    class PSVBListener implements ActionListener{
+        int i=0;
+        @Override
+        public void actionPerformed(ActionEvent e) {
+
+            new ShumExcelParser().parsexls(data.psv, "c:/users/vadim/ideaprojects/rasschetmetodika/data/2.xls");
+
+
+            for(Map.Entry<Double,Double> pair :data.psv.entrySet()  ){
+                String[]b={pair.getKey().toString(), pair.getValue().toString()};
+                t[i]=b;
+                i++;
+
+
+
+            }
+            psvchck.setVisible(true);
+            psv.setVisible(false);
+            setPsvb(true);
+            isAllBoolean();
+
+
+        }
+    }
+
+    class PSMCBListener implements ActionListener{
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            new PShumTableCheck().createUI(t, k);
+        }
+    }
+
+    class CBActionlistener implements ActionListener{
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            JComboBox box=(JComboBox)e.getSource();
+            String item = (String)box.getSelectedItem();
+            int c=Integer.parseInt(item);
+            setDegrass(c);
         }
     }
 
